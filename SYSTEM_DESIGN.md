@@ -1,5 +1,5 @@
 # Technical Architecture & Design Document
-## HROne — Employee Attendance & Analytics API (Contract v2.0)
+## HROne — Employee Attendance & Analytics API
 
 ---
 
