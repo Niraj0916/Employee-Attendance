@@ -1,26 +1,63 @@
-# Candidate kit
+# Employee Attendance & Analytics API
 
-Read in this order:
+FastAPI backend service implementing attendance tracking, manual regularization with audit trails, and MongoDB aggregation analytics. Conforms to OpenAPI contract v2.0.
 
-1. `PROBLEM_STATEMENT.docx`: what you are asked to do, how it is evaluated.
-2. `openapi.yaml`: the API contract and the business rules (R1 - R10).
-3. `DATA_MODEL.md`: what is stored in MongoDB, with nine sample documents.
-4. `app/main.py`: the starter. Put **all** your code in this one file. It must start with `uvicorn app.main:app --port 8000`.
-5. `REVIEW.md`, `DECISIONS.md`: templates to fill in.
+## How to Run
 
-`sample_data/` holds the nine sample documents as MongoDB Extended JSON; `sample_seed.py` loads them. The grader's dataset is
-much larger and contains cases they do not show.
+1. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Local setup
+2. **Environment Variables**:
+   Set `MONGO_URI` and `MONGO_DB` (or create a local `.env`):
+   ```env
+   MONGO_URI=mongodb://localhost:27017
+   MONGO_DB=attendance_db
+   ```
+   *Note: Real environment variables take precedence over `.env`.*
+
+3. **Seed Sample Data (Optional)**:
+   ```bash
+   python sample_seed.py
+   ```
+
+4. **Start the API Server**:
+   ```bash
+   uvicorn app.main:app --port 8000
+   ```
+
+The application creates all required database indexes automatically and idempotently on startup.
+
+## Testing
+
+Run the automated test suites:
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env            # set MONGO_URI / MONGO_DB (local docker: docker run -p 27017:27017 mongo:7)
-python sample_seed.py
-uvicorn app.main:app --port 8000 --reload
+python test_runner.py
+python test_edge_cases.py
 ```
-MongoDB **6.0 or newer** is required (the grader uses 7.0). MongoDB Atlas free tier (M0) works.
 
-## Submit
-A public Git repository with `app/main.py`, `requirements.txt`, `REVIEW.md`, `DECISIONS.md` and a short `README.md`.
-No `.env`, no secrets, no Dockerfile.
+## Implemented Endpoints
+
+- **System**: `GET /health` (readiness ping)
+- **Employees**: `POST /employees`, `GET /employees` (sorted, filtered, paginated)
+- **Attendance**:
+  - `POST /attendance/punch-in` (race-safe, R1 overnight, R2 10m grace)
+  - `POST /attendance/punch-out` (atomic concurrency, R3 overtime >= 30m, R4 work hours, R5 half-day)
+  - `GET /attendance` (index-backed sorting and pagination)
+  - `PATCH /attendance/{emp_code}/{date}` (regularization with audit history)
+- **Analytics (MongoDB Aggregation Pipelines)**:
+  - `GET /analytics/employees/{emp_code}/monthly` (working days from joined_on, presence count)
+  - `GET /analytics/departments/summary` (preserves zero-log headcount, average work hours)
+  - `GET /analytics/leaderboard/late` (standard competition ranking with ties 1, 2, 2, 4)
+  - `GET /analytics/departments/{department}/trend` (gap-filled daily series with 7-day moving average)
+- **Admin**:
+  - `GET /admin/explain/{endpoint}` (returns executionStats proving IXSCAN usage)
+
+## Deliverables
+
+- `app/main.py`: Single-file FastAPI application.
+- `requirements.txt`: Project dependencies.
+- `REVIEW.md`: Starter code audit and fixes (Part A).
+- `DECISIONS.md`: Architectural design decisions (Part C).
+- `README.md`: Execution instructions and notes.
